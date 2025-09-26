@@ -1,0 +1,178 @@
+---
+title: "CFB Betting"
+output: html_document
+date: "2025-08-17"
+---
+
+### Passing
+
+```{r}
+passing_data = read.csv("Passing.csv")
+head(passing_data)
+```
+#### Yards
+
+```{r}
+pass_yrds <- passing_data[, !names(passing_data) %in% c("X","Player", "Pos","Team", "Completions", "Attempts", "AVG", "TD", "INT", "QBR", "Opponent")]
+```
+```{r}
+set.seed(123)
+
+sample_index <- sample(1:nrow(pass_yrds), size = 0.8 * nrow(pass_yrds))
+
+pass_yrds_train <- pass_yrds[sample_index, ]
+pass_yrds_test <- pass_yrds[-sample_index, ]
+```
+```{r}
+pass_yrds_model <- step(lm(YDS ~ ., data = pass_yrds_train), direction = "both")
+pass_yrds_pred <- predict(pass_yrds_model, newdata = pass_yrds_test)
+```
+
+```{r}
+plot(pass_yrds_test$YDS, pass_yrds_pred, 
+     main = "Predicted Pass Yards vs Actual Passing Yards", 
+     xlab = "Actual yards",
+     ylab = "Predicted Yards", 
+     pch = 19, col = "blue")
+abline(0, 1, col = "red", lwd = 2)
+```
+```{r}
+summary(pass_yrds_model)
+options(scipen = 999)
+vars <- as.data.frame(coef(pass_yrds_model))
+vars$`coef(pass_yrds_model)`<- as.numeric(vars$`coef(pass_yrds_model)`)
+
+write.csv(vars, "vars.csv")
+```
+
+#### TDs
+
+```{r}
+pass_tds <- passing_data[, !names(passing_data) %in% c("X", "Pos","Player", "Team", "Completions", "Attempts", "AVG", "YDS", "INT", "QBR", "Opponent")]
+pass_tds
+```
+```{r}
+set.seed(123)
+
+sample_index <- sample(1:nrow(pass_tds), size = 0.8 * nrow(pass_tds))
+
+pass_tds_train <- pass_tds[sample_index, ]
+pass_tds_test <- pass_tds[-sample_index, ]
+```
+
+```{r}
+pass_tds_model <- lm(TD ~ ., data = pass_tds_train)
+pass_tds_pred <- predict(pass_tds_model, newdata = pass_tds_test)
+```
+
+```{r}
+plot(pass_tds_test$TD, pass_tds_pred, 
+     main = "Predicted Pass TDs vs Actual Passing TDs", 
+     xlab = "Actual TDs",
+     ylab = "Predicted TDs", 
+     pch = 19, col = "blue")
+abline(0, 1, col = "red", lwd = 2)
+```
+```{r}
+passing_data$yrd_pred <- predict(pass_yrds_model, newdata = passing_data)
+passing_data$TDs_pred <- predict(pass_tds_model, newdata = passing_data)
+passing_data[, names(passing_data) %in% c("Player", "Opponent", "YDS", "yrd_pred")]
+td_pred <- passing_data[, names(passing_data) %in% c("Player", "Opponent", "TD", "TDs_pred")]
+```
+```{r}
+passing_data[passing_data$Player == "Drew Allar", names(passing_data) %in% c("Player", "Opponent", "YDS", "yrd_pred")]
+```
+
+
+### RB Rushing
+
+```{r}
+rb_rushing_data <- read.csv("rb rushing.csv")
+rb_rushing_data <- rb_rushing_data[, -1]
+head(rb_rushing_data)
+```
+
+#### Yards 
+```{r}
+set.seed(123)
+rb_rush_yds <- rb_rushing_data[, !names(rb_rushing_data) %in% c("Player", "Pos", "Team", "CAR", "AVG", "TD", "LONG", "Opponent")]
+
+sample_index <- sample(1:nrow(rb_rush_yds), size = 0.8 * nrow(rb_rush_yds))
+
+rb_rush_yds_train <- rb_rush_yds[sample_index, ]
+rb_rush_yds_test <- rb_rush_yds[-sample_index, ]
+
+rb_rush_yds_model = step(lm(YDS ~ ., data = rb_rush_yds_train), direction = "both")
+rush_yds_pred <- predict(rb_rush_yds_model, newdata = rb_rush_yds_test)
+```
+
+```{r}
+plot(rb_rush_yds_test$YDS, rush_yds_pred, 
+     xlab = "actual", ylab = "pred", col = "blue", pch = 19)
+abline(0, 1, col = "red", lwd = 2)
+```
+
+```{r}
+rb_rushing_data$pred_yds <- predict(rb_rush_yds_model, newdata = rb_rushing_data)
+rb_rushing_data[, names(rb_rushing_data) %in% c("Player","Team", "Opponent", "YDS", "pred_yds")]
+```
+
+
+```{r}
+vars <- as.data.frame(coef(rb_rush_yds_model))
+write.csv(vars, "vars.csv")
+```
+
+### Receiving 
+
+```{r}
+receiving_data <- read.csv("skill_pos_rec.csv")
+head(receiving_data)
+```
+#### Yards 
+
+```{r}
+rec_yds <- receiving_data[, !names(receiving_data) %in% c("X", "Player", "Pos", "Team", "REC", "AVG", "TD", "LONG", "Opponent")]
+```
+```{r}
+sample_index <- sample(1:nrow(rec_yds), size = 0.8 * nrow(rec_yds))
+
+rec_yds_train <- rec_yds[sample_index, ]
+rec_yds_test <-rec_yds[-sample_index, ]
+```
+```{r}
+rec_yds_model <- step(lm(YDS~., data = rec_yds_train), direction = "both")
+rec_yds_pred <- predict(rec_yds_model, newdata = rec_yds_test)
+```
+
+```{r}
+plot(rec_yds_test$YDS, rec_yds_pred, 
+     xlab = "actual", ylab = "pred", pch = 19, col = "blue")
+abline(0, 1, col = "red", lwd = 2)
+```
+
+```{r}
+receiving_data$yds_pred <- predict(rec_yds_model, newdata = receiving_data)
+smith <- receiving_data[receiving_data$Player == "Jeremiah Smith" & receiving_data$Opponent == "Penn State", ]
+write.csv(smith, "smith_vs_psu.csv")
+```
+```{r}
+summary(rec_yds_model)
+```
+
+```{r}
+vars <- as.data.frame(coef(rec_yds_model))
+write.csv(vars, "vars.csv")
+```
+
+```{r}
+w1 <- read.csv("w.csv")
+w1$pred_yards <- predict(rec_yds_model, newdata = w1)
+
+w1$pre
+
+w1[, names(w1) %in% c("Player", "Predicted.Yards", "pred_yards")]
+```
+
+
+
